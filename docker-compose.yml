@@ -1,0 +1,124 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: magento-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    command:
+      - --max_allowed_packet=256M
+      - --innodb_buffer_pool_size=2G
+      - --performance_schema=ON
+      - --log-bin-trust-function-creators=1
+    networks:
+      - traefik
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    container_name: magento-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+    volumes:
+      - ./elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - traefik
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: magento-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - ./redis-data:/data
+    networks:
+      - traefik
+
+  varnish:
+    image: varnish:7.4
+    container_name: magento-varnish
+    restart: unless-stopped
+    environment:
+      - VARNISH_SIZE=${VARNISH_SIZE}
+    volumes:
+      - ./varnish/default.vcl:/etc/varnish/default.vcl:ro
+    command: ["varnishd", "-F", "-f", "/etc/varnish/default.vcl", "-a", ":80", "-s", "malloc,${VARNISH_SIZE}"]
+    networks:
+      - traefik
+    depends_on:
+      - web
+
+  web:
+    build: .
+    container_name: magento-web
+    restart: unless-stopped
+    environment:
+      # Magento Config
+      - MAGENTO_BASE_URL=${MAGENTO_BASE_URL}
+      - MAGENTO_BASE_URL_SECURE=${MAGENTO_BASE_URL_SECURE}
+      - MAGENTO_ADMIN_FIRSTNAME=${MAGENTO_ADMIN_FIRSTNAME}
+      - MAGENTO_ADMIN_LASTNAME=${MAGENTO_ADMIN_LASTNAME}
+      - MAGENTO_ADMIN_EMAIL=${MAGENTO_ADMIN_EMAIL}
+      - MAGENTO_ADMIN_USER=${MAGENTO_ADMIN_USER}
+      - MAGENTO_ADMIN_PASSWORD=${MAGENTO_ADMIN_PASSWORD}
+      # Database Config
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      # Elasticsearch Config
+      - ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST}
+      - ELASTICSEARCH_PORT=${ELASTICSEARCH_PORT}
+      # Redis Config
+      - REDIS_HOST=${REDIS_HOST}
+      # PHP Config
+      - PHP_MEMORY_LIMIT=${PHP_MEMORY_LIMIT}
+      - PHP_MAX_EXECUTION_TIME=${PHP_MAX_EXECUTION_TIME}
+      # Composer Auth
+      - COMPOSER_AUTH_KEYS=${COMPOSER_AUTH_KEYS}
+    volumes:
+      - ./magento:/var/www/html
+      - ./logs/nginx:/var/log/nginx
+      - ./logs/php:/var/log/php
+    ports:
+      - "80:80"  # ← Agrega esta línea
+    networks:
+      - traefik
+    depends_on:
+      mysql:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+      redis:
+        condition: service_started
+    labels:
+      - "traefik.enable=true"
+      # Router principal para Magento
+      - "traefik.http.routers.magento.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.magento.entrypoints=websecure"
+      - "traefik.http.routers.magento.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.magento.service=magento"
+      # Servicio para Magento
+      - "traefik.http.services.magento.loadbalancer.server.port=80"
+      # Router para admin con path específico
+      - "traefik.http.routers.magento-admin.rule=Host(`${DOMAIN}`) && PathPrefix(`/admin`)"
+      - "traefik.http.routers.magento-admin.entrypoints=websecure"
+      - "traefik.http.routers.magento-admin.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.magento-admin.service=magento"
+
+networks:
+  traefik:
+    external: true
