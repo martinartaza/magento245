@@ -23,19 +23,18 @@ services:
       timeout: 20s
       retries: 10
 
-  elasticsearch:
-    image: elasticsearch:8.11.0
-    container_name: magento-elasticsearch
+  opensearch:
+    image: opensearchproject/opensearch:2.12.0
+    container_name: magento-opensearch
     restart: unless-stopped
     environment:
       - discovery.type=single-node
-      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
-      - xpack.security.enabled=false
-      - xpack.security.enrollment.enabled=false
+      - plugins.security.disabled=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
     volumes:
-      - ./elasticsearch-data:/usr/share/elasticsearch/data
+      - ./opensearch-data:/usr/share/opensearch/data
     networks:
-      - traefik
+      - traefik  # ← Eliminé el guión y el espacio
 
   redis:
     image: redis:7.2-alpine
@@ -79,41 +78,34 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
-      # Elasticsearch Config
-      - ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST}
-      - ELASTICSEARCH_PORT=${ELASTICSEARCH_PORT}
+      # OpenSearch Config
+      - OPENSEARCH_HOST=opensearch
+      - OPENSEARCH_PORT=9200
       # Redis Config
       - REDIS_HOST=${REDIS_HOST}
       # PHP Config
       - PHP_MEMORY_LIMIT=${PHP_MEMORY_LIMIT}
       - PHP_MAX_EXECUTION_TIME=${PHP_MAX_EXECUTION_TIME}
-      # Composer Auth
-      - COMPOSER_AUTH_KEYS=${COMPOSER_AUTH_KEYS}
     volumes:
       - ./magento:/var/www/html
       - ./logs/nginx:/var/log/nginx
       - ./logs/php:/var/log/php
-    ports:
-      - "80:80"  # ← Agrega esta línea
     networks:
       - traefik
     depends_on:
       mysql:
         condition: service_healthy
-      elasticsearch:
+      opensearch:
         condition: service_started
       redis:
         condition: service_started
     labels:
       - "traefik.enable=true"
-      # Router principal para Magento
       - "traefik.http.routers.magento.rule=Host(`${DOMAIN}`)"
       - "traefik.http.routers.magento.entrypoints=websecure"
       - "traefik.http.routers.magento.tls.certresolver=letsencrypt"
       - "traefik.http.routers.magento.service=magento"
-      # Servicio para Magento
       - "traefik.http.services.magento.loadbalancer.server.port=80"
-      # Router para admin con path específico
       - "traefik.http.routers.magento-admin.rule=Host(`${DOMAIN}`) && PathPrefix(`/admin`)"
       - "traefik.http.routers.magento-admin.entrypoints=websecure"
       - "traefik.http.routers.magento-admin.tls.certresolver=letsencrypt"

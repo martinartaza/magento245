@@ -1,18 +1,16 @@
 #!/bin/bash
 
 # Iniciar PHP-FPM
-php-fpm8.5 -D
+php-fpm8.2 -D
+
+# Instalar Magento si no está instalado
+/usr/local/bin/install-magento.sh
 
 # Iniciar Nginx
 nginx -g "daemon off;" &
 
-# Iniciar cron (opcional)
+# Iniciar cron
 cron
 
-# Mantener el contenedor corriendo y mostrar logs
-echo "✅ Servicios iniciados: PHP-FPM, Nginx"
-echo "📝 Puedes ejecutar comandos manualmente con: docker compose exec web /bin/bash"
-echo "📋 Logs en tiempo real:"
-
-# Mostrar logs de nginx y php-fpm en tiempo real
+# Mantener el contenedor vivo
 tail -f /var/log/nginx/error.log /var/log/php/php-fpm.log

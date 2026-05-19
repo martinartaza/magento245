@@ -1,7 +1,14 @@
+# Env files
 .env
+auth.json
+
+# Docker data
+.idea/
 mysql-data/
-elasticsearch-data/
+opensearch-data/
 redis-data/
 magento/
 logs/
-*.log
+
+# OS files
+.DS_Store
