@@ -1,8 +1,19 @@
 vcl 4.0;
 
+import std;
+
+# Definir backend con resolución de DNS retry
 backend default {
     .host = "web";
     .port = "80";
+    .probe = {
+        .url = "/";
+        .timeout = 1s;
+        .interval = 5s;
+        .window = 5;
+        .threshold = 3;
+    }
+    .resolve = "docker";
 }
 
 sub vcl_recv {
@@ -25,4 +36,4 @@ sub vcl_deliver {
     } else {
         set resp.http.X-Cache = "MISS";
     }
-}
+} 
