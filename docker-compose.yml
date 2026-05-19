@@ -17,7 +17,7 @@ services:
       - --performance_schema=ON
       - --log-bin-trust-function-creators=1
     networks:
-      - traefik
+      - internal   # <-- agregado: web necesita llegar a mysql por hostname
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       timeout: 20s
@@ -31,13 +31,18 @@ services:
       - discovery.type=single-node
       - plugins.security.disabled=true
       - OPENSEARCH_JAVA_OPTS=${OPENSEARCH_JAVA_OPTS}
-      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD}
       - DISABLE_SECURITY_PLUGIN=true
     volumes:
       - ./opensearch-data:/usr/share/opensearch/data
     networks:
-      - traefik
       - internal
+    # Healthcheck real: espera que OpenSearch esté listo (tarda ~60s)
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
 
   redis:
     image: redis:7.2-alpine
@@ -47,7 +52,12 @@ services:
     volumes:
       - ./redis-data:/data
     networks:
-      - traefik
+      - internal   # <-- corregido: antes solo estaba en traefik
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   varnish:
     image: varnish:7.4
@@ -63,6 +73,17 @@ services:
       - internal
     depends_on:
       - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.magento.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.magento.entrypoints=websecure"
+      - "traefik.http.routers.magento.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.magento.service=magento"
+      - "traefik.http.services.magento.loadbalancer.server.port=80"
+      - "traefik.http.routers.magento-admin.rule=Host(`${DOMAIN}`) && PathPrefix(`/admin`)"
+      - "traefik.http.routers.magento-admin.entrypoints=websecure"
+      - "traefik.http.routers.magento-admin.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.magento-admin.service=magento"
 
   web:
     build: .
@@ -95,26 +116,14 @@ services:
       - ./logs/nginx:/var/log/nginx
       - ./logs/php:/var/log/php
     networks:
-      - traefik
-      - internal
+      - internal   # web NO necesita estar en traefik; varnish es el proxy
     depends_on:
       mysql:
         condition: service_healthy
       opensearch:
-        condition: service_started
+        condition: service_healthy   # <-- corregido: antes era service_started
       redis:
-        condition: service_started
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.magento.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.magento.entrypoints=websecure"
-      - "traefik.http.routers.magento.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.magento.service=magento"
-      - "traefik.http.services.magento.loadbalancer.server.port=80"
-      - "traefik.http.routers.magento-admin.rule=Host(`${DOMAIN}`) && PathPrefix(`/admin`)"
-      - "traefik.http.routers.magento-admin.entrypoints=websecure"
-      - "traefik.http.routers.magento-admin.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.magento-admin.service=magento"
+        condition: service_healthy   # <-- corregido: antes era service_started
 
 networks:
   traefik:

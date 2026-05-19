@@ -1,16 +1,12 @@
 #!/bin/bash
+set -e
 
-# Iniciar PHP-FPM
-php-fpm8.2 -D
+# Crear directorios de log si no existen
+mkdir -p /var/log/nginx /var/log/php /run/php
+chown -R www-data:www-data /var/log/nginx /var/log/php /run/php
 
-# Instalar Magento si no está instalado
+# Ejecutar instalación/upgrade de Magento
 /usr/local/bin/install-magento.sh
 
-# Iniciar Nginx
-nginx -g "daemon off;" &
-
-# Iniciar cron
-cron
-
-# Mantener el contenedor vivo
-tail -f /var/log/nginx/error.log /var/log/php/php-fpm.log
+# Arrancar todos los servicios via supervisord (PHP-FPM + Nginx + Cron)
+exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
