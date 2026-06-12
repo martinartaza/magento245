@@ -1,33 +1,33 @@
-vcl 4.0;
+vcl 4.1;
 
 import std;
 
-# Definir backend con resolución de DNS retry
 backend default {
     .host = "web";
     .port = "80";
-    .probe = {
-        .url = "/";
-        .timeout = 1s;
-        .interval = 5s;
-        .window = 5;
-        .threshold = 3;
-    }
-    .resolve = "docker";
+    .first_byte_timeout = 300s;
+    .connect_timeout = 5s;
+    .between_bytes_timeout = 2s;
 }
 
 sub vcl_recv {
     if (req.method == "PURGE") {
         return (purge);
     }
-    
-    if (req.url ~ "^/(pub/)?(media|static)/") {
+    if (req.url ~ "^/admin" || req.url ~ "^/(pub/)?(media|static)/") {
+        return (pass);
+    }
+    if (req.method != "GET" && req.method != "HEAD") {
         return (pass);
     }
 }
 
 sub vcl_backend_response {
     set beresp.ttl = 1d;
+    set beresp.grace = 1h;
+    if (beresp.http.Set-Cookie) {
+        set beresp.ttl = 0s;
+    }
 }
 
 sub vcl_deliver {
@@ -36,4 +36,4 @@ sub vcl_deliver {
     } else {
         set resp.http.X-Cache = "MISS";
     }
-} 
+}
