@@ -13,7 +13,7 @@ echo "✅ OpenSearch listo."
 
 # ─── Instalación o upgrade ───────────────────────────────────────────────────
 if [ ! -f "/var/www/html/app/etc/env.php" ]; then
-    echo "🚀 Instalando Magento 2.4.7..."
+    echo "🚀 Instalando Magento 2.4.9..."
 
     # Copiar auth.json al home de www-data/root para que Composer lo use
     if [ -f "/var/www/html/auth.json" ]; then
@@ -24,7 +24,7 @@ if [ ! -f "/var/www/html/app/etc/env.php" ]; then
     # Crear proyecto (en directorio actual ya montado como volumen)
     composer create-project \
         --repository-url=https://repo.magento.com/ \
-        magento/project-community-edition:2.4.7 \
+        magento/project-community-edition:2.4.9 \
         . \
         --no-interaction
 

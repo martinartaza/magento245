@@ -34,39 +34,39 @@ RUN apt-get update && apt-get install -y \
     htop \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalar PHP 8.2
+# Instalar PHP 8.5
 RUN add-apt-repository ppa:ondrej/php -y && \
     apt-get update && apt-get install -y \
-    php8.2-fpm \
-    php8.2-cli \
-    php8.2-common \
-    php8.2-mysql \
-    php8.2-zip \
-    php8.2-gd \
-    php8.2-curl \
-    php8.2-xml \
-    php8.2-mbstring \
-    php8.2-bcmath \
-    php8.2-intl \
-    php8.2-soap \
-    php8.2-xsl \
-    php8.2-redis \
-    php8.2-opcache \
-    php8.2-apcu \
-    php8.2-bz2 \
-    php8.2-ldap \
-    php8.2-gmp \
-    php8.2-imagick \
+    php8.5-fpm \
+    php8.5-cli \
+    php8.5-common \
+    php8.5-mysql \
+    php8.5-zip \
+    php8.5-gd \
+    php8.5-curl \
+    php8.5-xml \
+    php8.5-mbstring \
+    php8.5-bcmath \
+    php8.5-intl \
+    php8.5-soap \
+    php8.5-xsl \
+    php8.5-redis \
+    php8.5-opcache \
+    php8.5-apcu \
+    php8.5-bz2 \
+    php8.5-ldap \
+    php8.5-gmp \
+    php8.5-imagick \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalar Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
 # Configurar PHP-FPM
-RUN sed -i "s/memory_limit = .*/memory_limit = 2048M/" /etc/php/8.2/fpm/php.ini && \
-    sed -i "s/max_execution_time = .*/max_execution_time = 3600/" /etc/php/8.2/fpm/php.ini && \
-    sed -i "s/upload_max_filesize = .*/upload_max_filesize = 64M/" /etc/php/8.2/fpm/php.ini && \
-    sed -i "s/post_max_size = .*/post_max_size = 64M/" /etc/php/8.2/fpm/php.ini
+RUN sed -i "s/memory_limit = .*/memory_limit = 2048M/" /etc/php/8.5/fpm/php.ini && \
+    sed -i "s/max_execution_time = .*/max_execution_time = 3600/" /etc/php/8.5/fpm/php.ini && \
+    sed -i "s/upload_max_filesize = .*/upload_max_filesize = 64M/" /etc/php/8.5/fpm/php.ini && \
+    sed -i "s/post_max_size = .*/post_max_size = 64M/" /etc/php/8.5/fpm/php.ini
 
 # Configurar Nginx
 RUN rm /etc/nginx/sites-enabled/default
