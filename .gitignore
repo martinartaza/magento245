@@ -21,3 +21,5 @@ magento/pub/media/
 magento/app/etc/env.php
 magento/auth.json
 magento/bin/
+magento/lib/
+magento/setup/
