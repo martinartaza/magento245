@@ -51,7 +51,7 @@ RUN add-apt-repository ppa:ondrej/php -y && \
     php8.5-soap \
     php8.5-xsl \
     php8.5-redis \
-    php8.5-opcache \
+#    php8.5-opcache \
     php8.5-apcu \
     php8.5-bz2 \
     php8.5-ldap \
