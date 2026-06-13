@@ -7,8 +7,16 @@ auth.json
 mysql-data/
 opensearch-data/
 redis-data/
-magento/
 logs/
 
 # OS files
 .DS_Store
+
+# Magento — dependencias y archivos generados (no versionar)
+magento/vendor/
+magento/generated/
+magento/var/
+magento/pub/static/
+magento/pub/media/
+magento/app/etc/env.php
+magento/auth.json
